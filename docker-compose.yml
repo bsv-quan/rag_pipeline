@@ -1,0 +1,10 @@
+version: '3.8'
+
+services:
+  qdrant:
+    image: qdrant/qdrant:v1.15.0   # dùng version cụ thể để ổn định
+    ports:
+      - "6333:6333"               # REST API
+    volumes:
+      - ./qdrant_storage:/qdrant/storage
+    restart: unless-stopped

@@ -205,3 +205,8 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# Qdrant storage
+#  Qdrant is a vector database. This directory contains storage files that should not be
+#  included in version control. Refer to https://qdrant.tech/documentation/storage/
+qdrant_storage/
