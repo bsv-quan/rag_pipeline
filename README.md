@@ -1,7 +1,6 @@
 # rag_pipeline
 Retrieval-Augmented Generation (RAG) Pipeline
 
-
 # build qdrant vector db
 docker-compose up -d
 
