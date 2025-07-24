@@ -1,0 +1,30 @@
+#transformers
+sentence-transformers
+transformers
+sentencepiece
+
+
+#pdf lib
+PyPDF2
+pdfplumber
+pytesseract
+pdf2image
+
+#api
+fastapi
+uvicorn[standard]
+python-multipart
+
+#utils
+dotenv
+aiofiles
+
+#laqnchain tools
+langchain
+langchain-openai
+
+#vector db
+qdrant-client==1.15.0
+
+#rag
+rank_bm25
