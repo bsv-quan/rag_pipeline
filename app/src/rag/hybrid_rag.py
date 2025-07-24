@@ -43,3 +43,34 @@ def run(question: str, client: QdrantClient, collection_name: str, is_topic: boo
     end = time.time()
     # Return answer, topic, and elapsed time
     return {"answer:": result, "topic": topic, "time": round(end - start, 3)}
+
+
+def run_retriever(question: str, client: QdrantClient, collection_name: str, is_topic: bool):
+    """
+    Run the retriever with the provided parameters.
+
+    Args:
+        question (str): The user's question.
+        client (QdrantClient): Qdrant vector database client.
+        collection_name (str): Name of the collection to search.
+        is_topic (bool): Whether to detect topic from the question.
+
+    Returns:
+        List[Document]: Retrieved documents based on the question.
+    """
+    # Get all texts from Qdrant collection for BM25
+    pairs = get_all_texts_from_qdrant(client, collection_name)
+    bm25_ids = [doc_id for doc_id, _ in pairs]
+    bm25_corpus = [text for _, text in pairs]
+    # Initialize retriever with embedding function and topic (if any)
+    retriever = HybridRetriever(
+        client=client,
+        collection_name=collection_name,
+        embed_fn=get_model().encode,
+        bm25_corpus=bm25_corpus,
+        bm25_ids=bm25_ids,
+        topic=detect_topic(question, get_available_topics(client, collection_name)) if is_topic else None,
+        top_k=5,
+        alpha=0.5  # Balance between semantic and keyword
+    )
+    return retriever
