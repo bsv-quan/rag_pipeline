@@ -2,9 +2,10 @@ from app.src.qdrant import HybridRetriever
 from app.src.process import generate_answer, get_model, detect_topic
 from app.src.qdrant import get_available_topics, get_all_texts_from_qdrant
 from qdrant_client import QdrantClient
+from typing import Optional
 import time
 
-def run(question: str, client: QdrantClient, collection_name: str, is_topic: bool):
+def run(question: str, client: QdrantClient, collection_name: str, is_topic: bool, is_memory: bool):
     """
     Run the chat function with the provided parameters.
 
@@ -39,10 +40,10 @@ def run(question: str, client: QdrantClient, collection_name: str, is_topic: boo
         alpha=0.5  # Balance between semantic and keyword
     )
     # Generate answer using retriever and question
-    result = generate_answer(retriever, question)
+    result = generate_answer(retriever, question, is_memory)
     end = time.time()
     # Return answer, topic, and elapsed time
-    return {"answer:": result, "topic": topic, "time": round(end - start, 3)}
+    return {"answer:": result, "topic": topic, "time": round(end - start, 3), "is_memory": is_memory}
 
 
 def run_retriever(question: str, client: QdrantClient, collection_name: str, is_topic: bool):

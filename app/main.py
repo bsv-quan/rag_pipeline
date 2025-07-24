@@ -41,6 +41,7 @@ async def chat(
     collection_name: str = Form(...), 
     type: str = Form(...), 
     is_topic: str = Form(...), 
+    memory: str = Form(...), 
     type_iterative: Optional[str] = Form("standard")
 ):
     """
@@ -55,6 +56,8 @@ async def chat(
         return create_response(status_code=400, message="collection_name parameter is required")
     if not type:
         return create_response(status_code=400, message="type parameter is required")
+    if not memory:
+        return create_response(status_code=400, message="memory parameter is required")
     if not question.strip():
         return create_response(status_code=400, message="question cannot be empty")
     # Handle chat logic and return response
@@ -64,6 +67,7 @@ async def chat(
         collection_name=collection_name, 
         type=type,
         is_topic=is_topic=="true",
-        type_iterative=type_iterative
+        type_iterative=type_iterative,
+        is_memmory=memory=="true"
     )
     return create_response(status, message, data)

@@ -1,43 +1,92 @@
 from langchain.prompts import PromptTemplate
 from langchain_openai import ChatOpenAI
 from langchain.chains import RetrievalQA
+from langchain_core.runnables import RunnableMap
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.prompts import PromptTemplate
+from langchain_core.messages import get_buffer_string
+from langchain.memory import ConversationBufferMemory
+from langchain.memory import ConversationSummaryMemory
 from app.src.utils import getEnvVariable
 from typing import List, Optional
 from langchain.schema import Document
 
-def generate_answer(retriever, question):
+def generate_answer(retriever, question, is_memory: bool) -> str:
     """
     Generate an answer to the question using the provided retriever and a language model.
     """
-    prompt_template = """
-    You are an assistant answering questions based on the provided context. Use the context to provide a concise and accurate answer to the question.
+    if is_memory:
+        # Prompt template including chat history for conversational memory
+        prompt_template = """
+        You are an assistant answering questions based on the provided context. Use the context to provide a concise and accurate answer to the question.
+        
+        Chat History:
+        {chat_history}
+        
+        Context:
+        {context}
 
-    Context:
-    {context}
+        Question:
+        {question}
 
-    Question:
-    {question}
+        Answer:
+        """
+    else:
+        # Prompt template for single-turn QA (no memory)
+        prompt_template = """
+        You are an assistant answering questions based on the provided context. Use the context to provide a concise and accurate answer to the question.
 
-    Answer:
-    """
+        Context:
+        {context}
+
+        Question:
+        {question}
+
+        Answer:
+        """
+        
+    # Create a prompt template with the provided template
     prompt = PromptTemplate.from_template(prompt_template)
 
-    # Define the LLM (Language Model)
+    # Define the LLM (Language Model) using environment variable for model name
     llm = ChatOpenAI(model=getEnvVariable("OPENAI_MODEL"))
+    if is_memory:
+        # === memory for context ===
+        memory = ConversationSummaryMemory(
+            llm=llm,
+            return_messages=True
+        )
+        # === Define the chain using RunnableMap ===
+        chain = (
+            RunnableMap({
+                "context": lambda x: retriever.invoke(x["question"]),
+                "question": lambda x: x["question"],
+                "chat_history": lambda x: get_buffer_string(memory.chat_memory.messages)
+            })
+            | prompt
+            | llm
+            | StrOutputParser()
+        )
 
-    # Create the RetrievalQA chain with the prompt
-    rag_chain = RetrievalQA.from_chain_type(
-        llm=llm,
-        retriever=retriever,
-        chain_type="stuff",
-        chain_type_kwargs={"prompt": prompt}
-    )
+        # === Manually update memory ===
+        memory.chat_memory.add_user_message(question)
+        response = chain.invoke({"question": question})
+        memory.chat_memory.add_ai_message(response)
+        return response  # Return the generated answer
+    else:
+        # Create the RetrievalQA chain with the prompt for single-turn QA
+        rag_chain = RetrievalQA.from_chain_type(
+            llm=llm,
+            retriever=retriever,
+            chain_type="stuff",
+            chain_type_kwargs={"prompt": prompt}
+        )
 
-    # Invoke the chain with the user's query
-    response = rag_chain.invoke({"query": question})
-    
-    # Return the generated answer
-    return response["result"]
+        # Invoke the chain with the user's query
+        response = rag_chain.invoke({"query": question})
+        # Return the generated answer (expects a dict with "result" key)
+        return response["result"]
+
 
 def generate_answer_from_docs(question: str, docs: List[Document]) -> str:
     """
@@ -53,6 +102,7 @@ def generate_answer_from_docs(question: str, docs: List[Document]) -> str:
     # Combine the content of all documents into a single context string
     context = "\n".join([doc.page_content for doc in docs])
 
+    # Prompt template for answering based on provided context
     prompt_template = """
     You are an assistant answering questions based on the provided context.
     Use only the context to answer the question as accurately and concisely as possible.
@@ -69,12 +119,12 @@ def generate_answer_from_docs(question: str, docs: List[Document]) -> str:
 
     # Define the LLM
     llm = ChatOpenAI(model=getEnvVariable("OPENAI_MODEL"))
-    # Create runnable chain
+    # Create runnable chain (prompt -> llm)
     chain = prompt | llm
 
     # Invoke the chain with the context and question
     result = chain.invoke({"context": context, "question": question})
-    # Return the generated answer
+    # Return the generated answer (expects .content attribute)
     return result.content
 
 def generate_followup_question_if_needed(question: str, answer: str) -> Optional[str]:
@@ -88,6 +138,7 @@ def generate_followup_question_if_needed(question: str, answer: str) -> Optional
     Returns:
         Optional[str]: The follow-up question if needed, otherwise None.
     """
+    # Prompt template for generating a follow-up question if needed
     prompt_template = """
     Given the original question and the current answer, decide whether a follow-up question is needed
     to clarify or improve the answer.
@@ -109,7 +160,7 @@ def generate_followup_question_if_needed(question: str, answer: str) -> Optional
 
     # Invoke the chain with the question and answer
     result = chain.invoke({"question": question, "answer": answer})
-    followup = result.content.strip()
+    followup = result.content.strip()  # Get the follow-up question or "None"
 
     # Return None if no follow-up is needed, otherwise return the follow-up question
     return None if followup.lower() == "none" else followup
