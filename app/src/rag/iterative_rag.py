@@ -38,7 +38,7 @@ def run(question: str, client: QdrantClient, retriever: BaseRetriever, collectio
     
     for iteration in range(max_iterations):
         # Retrieve documents relevant to the current question
-        docs = retriever.get_relevant_documents(current_question)
+        docs = retriever.invoke(current_question)
         accumulated_context.extend(docs)  # Add new docs to the context
 
         # Generate answer from the accumulated context
