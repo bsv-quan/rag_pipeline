@@ -66,6 +66,7 @@ def get_all_texts_from_qdrant(client: QdrantClient, collection_name: str) -> Lis
         with_payload=True,
         limit=1000  # adjust based on size
     )
+    print (f"Retrieved {len(scroll_result[0])} points from collection {collection_name}")  # Debugging info
     return [
         (point.payload.get("id", ""), point.payload.get("text", ""))
         for point in scroll_result[0]

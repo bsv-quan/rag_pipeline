@@ -1,5 +1,6 @@
 from langchain.prompts import PromptTemplate
 from langchain_openai import ChatOpenAI
+from langchain_ollama import ChatOllama
 from langchain.chains import RetrievalQA
 from langchain_core.runnables import RunnableMap
 from langchain_core.output_parsers import StrOutputParser
@@ -11,7 +12,7 @@ from app.src.utils import getEnvVariable
 from typing import List, Optional
 from langchain.schema import Document
 
-def generate_answer(retriever, question, is_memory: bool) -> str:
+def generate_answer(retriever, question, is_memory: bool, model_name: Optional[str]=None) -> str:
     """
     Generate an answer to the question using the provided retriever and a language model.
     """
@@ -47,9 +48,19 @@ def generate_answer(retriever, question, is_memory: bool) -> str:
         
     # Create a prompt template with the provided template
     prompt = PromptTemplate.from_template(prompt_template)
+    
+    print("Using model:", model_name if model_name else "default OpenAI model")
 
     # Define the LLM (Language Model) using environment variable for model name
-    llm = ChatOpenAI(model=getEnvVariable("OPENAI_MODEL"))
+    if model_name:
+        llm = ChatOllama(
+            model=model_name,
+            base_url="https://ai-api.bravesoft.vn:8080", )
+    else:
+        llm = ChatOpenAI(model=getEnvVariable("OPENAI_MODEL"))
+        
+    # If memory is enabled, use ConversationSummaryMemory to summarize chat history
+    # Otherwise, create a RetrievalQA chain for single-turn QA
     if is_memory:
         # === memory for context ===
         memory = ConversationSummaryMemory(

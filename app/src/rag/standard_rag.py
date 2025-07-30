@@ -2,9 +2,10 @@ from app.src.qdrant import StandardRetriever
 from app.src.process import generate_answer, get_model, detect_topic
 from app.src.qdrant import get_available_topics
 from qdrant_client import QdrantClient
+from typing import Optional
 import time
 
-def run(question: str, client: QdrantClient, collection_name: str, is_topic: bool, is_memory: bool):
+def run(question: str, client: QdrantClient, collection_name: str, is_topic: bool, is_memory: bool, model_name: Optional[str] = None):
     """
     Run the chat function with the provided parameters.
 
@@ -32,7 +33,7 @@ def run(question: str, client: QdrantClient, collection_name: str, is_topic: boo
         top_k=5
     )
     # Generate answer using retriever and question
-    result = generate_answer(retriever, question, is_memory)
+    result = generate_answer(retriever, question, is_memory, model_name=model_name)
     end = time.time()
     # Return answer, topic, and elapsed time
     return {"answer:": result, "topic": topic, "time": round(end - start, 3), "is_memory": is_memory}
