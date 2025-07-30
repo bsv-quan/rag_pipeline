@@ -17,7 +17,7 @@ def init_qdrant_client():
     """
     return QdrantClient("localhost", port=6333)
     
-@app.post("/upload/")
+@app.post("/upload")
 async def upload_pdf(file: UploadFile = File(...), topic: str = Form(...), collection_name: str = Form(...)):
     """
     Endpoint to upload a PDF file and process it into vectors for retrieval.
@@ -35,14 +35,15 @@ async def upload_pdf(file: UploadFile = File(...), topic: str = Form(...), colle
     status, message, data = await handle_upload_file(file, init_qdrant_client(), topic, collection_name)
     return create_response(status, message, data)
 
-@app.post("/chat/")
+@app.post("/chat")
 async def chat(
     question: str = Form(...), 
     collection_name: str = Form(...), 
     type: str = Form(...), 
-    is_topic: str = Form(...), 
-    memory: str = Form(...), 
-    type_iterative: Optional[str] = Form("standard")
+    is_topic: Optional[str] = Form("false"), 
+    memory: Optional[str] = Form("false"), 
+    type_iterative: Optional[str] = Form("standard"),
+    model_name: Optional[str] = Form(None)
 ):
     """
     Endpoint to chat with the RAG system using a user query.
@@ -50,14 +51,10 @@ async def chat(
     # Validate required parameters
     if not question:
         return create_response(status_code=400, message="question parameter is required")
-    if not is_topic:
-        return create_response(status_code=400, message="is_topic parameter is required")
     if not collection_name:
         return create_response(status_code=400, message="collection_name parameter is required")
     if not type:
         return create_response(status_code=400, message="type parameter is required")
-    if not memory:
-        return create_response(status_code=400, message="memory parameter is required")
     if not question.strip():
         return create_response(status_code=400, message="question cannot be empty")
     # Handle chat logic and return response
@@ -68,6 +65,7 @@ async def chat(
         type=type,
         is_topic=is_topic=="true",
         type_iterative=type_iterative,
-        is_memmory=memory=="true"
+        is_memmory=memory=="true",
+        model_name=model_name
     )
     return create_response(status, message, data)

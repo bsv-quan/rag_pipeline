@@ -5,7 +5,7 @@ from qdrant_client import QdrantClient
 from typing import Optional
 import time
 
-def run(question: str, client: QdrantClient, collection_name: str, is_topic: bool, is_memory: bool):
+def run(question: str, client: QdrantClient, collection_name: str, is_topic: bool, is_memory: bool, model_name: Optional[str] = None):
     """
     Run the chat function with the provided parameters.
 
@@ -26,8 +26,10 @@ def run(question: str, client: QdrantClient, collection_name: str, is_topic: boo
         topic = None
     # Get all texts from Qdrant collection for BM25
     pairs = get_all_texts_from_qdrant(client, collection_name)
+    print(f"Pairs retrieved: {len(pairs)}")  # Debugging info
     bm25_ids = [doc_id for doc_id, _ in pairs]
     bm25_corpus = [text for _, text in pairs]
+    print(f"BM25 corpus size: {len(bm25_corpus)} documents, IDs: {len(bm25_ids)}")  # Debugging info
     # Initialize retriever with embedding function and topic (if any)
     retriever = HybridRetriever(
         client=client,
@@ -40,7 +42,7 @@ def run(question: str, client: QdrantClient, collection_name: str, is_topic: boo
         alpha=0.5  # Balance between semantic and keyword
     )
     # Generate answer using retriever and question
-    result = generate_answer(retriever, question, is_memory)
+    result = generate_answer(retriever, question, is_memory, model_name=model_name)
     end = time.time()
     # Return answer, topic, and elapsed time
     return {"answer:": result, "topic": topic, "time": round(end - start, 3), "is_memory": is_memory}

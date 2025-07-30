@@ -22,6 +22,7 @@ aiofiles
 #laqnchain tools
 langchain
 langchain-openai
+langchain_ollama
 
 #vector db
 qdrant-client==1.15.0
